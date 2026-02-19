@@ -6,6 +6,7 @@ import { useMediaQuery} from 'react-responsive'
 
 const Hero = () => {
     const videoRef=useRef()
+    const videoTimelineRef = useRef(null)
     const isMobile=useMediaQuery({maxWidth:767})
     useGSAP(()=>{
         const heroSplit=new SplitText('.title',{type:'chars,words'})
@@ -46,10 +47,26 @@ const Hero = () => {
                 scrub:true,
             }
         })
-        videoRef.current.onloadedmetadata=()=>{
-            tl.to(videoRef.current,{
-                currentTime:videoRef.current.duration
+        videoTimelineRef.current = tl
+        const videoEl = videoRef.current
+        if (!videoEl) return
+        const handleLoadedMetadata = () => {
+            if (!Number.isFinite(videoEl.duration) || videoEl.duration <= 0) return
+            tl.to(videoEl, {
+                currentTime: videoEl.duration,
             })
+        }
+        const handleError = () => {
+            tl.kill()
+            videoTimelineRef.current = null
+        }
+
+        videoEl.addEventListener('loadedmetadata', handleLoadedMetadata)
+        videoEl.addEventListener('error', handleError)
+
+        return () => {
+            videoEl.removeEventListener('loadedmetadata', handleLoadedMetadata)
+            videoEl.removeEventListener('error', handleError)
         }
     },[])
   return (
@@ -79,7 +96,10 @@ const Hero = () => {
         </div>
     </section>
     <div className="video absolute inset-0">
-        <video ref={videoRef} src="./videos/output.mp4" muted playsInline preload="auto"></video>
+        <video ref={videoRef} muted playsInline preload="metadata">
+            <source src="/videos/output.mp4" type="video/mp4" />
+            <source src="/videos/input.mp4" type="video/mp4" />
+        </video>
     </div>
     </>
   )
